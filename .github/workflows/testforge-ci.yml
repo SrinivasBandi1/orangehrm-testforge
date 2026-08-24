@@ -1,0 +1,49 @@
+# TestForge CI — auto-generated. Runs the generated Selenium + TestNG suite on every push.
+# App under test: https://opensource-demo.orangehrmlive.com/web/index.php/auth/login
+name: TestForge CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  ui-tests:
+    name: UI tests (Selenium + TestNG)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Verify Chrome is available
+        run: google-chrome --version || true
+
+      - name: Run tests (headless on CI)
+        env:
+          CI: 'true'
+          # Tests that sign in read the account from the environment rather than from source,
+          # so a working credential is never committed to this repository. Add these two in
+          # Settings > Secrets and variables > Actions > New repository secret.
+          #
+          # Suites with no login step ignore them entirely and run without any setup.
+          TESTFORGE_USERNAME: ${{ secrets.TESTFORGE_USERNAME }}
+          TESTFORGE_PASSWORD: ${{ secrets.TESTFORGE_PASSWORD }}
+        run: mvn -B test --no-transfer-progress
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            target/surefire-reports/
+            test-output/
+          if-no-files-found: ignore
